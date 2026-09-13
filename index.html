@@ -419,7 +419,20 @@
         <div id="settingsTabContent" class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-200 space-y-6 hidden">
             <div>
                 <h2 class="text-xl font-bold text-gray-900">Election Officials & Admin Security</h2>
-                <p class="text-xs text-gray-500 mt-1">Configure Returning Officer signature blocks and Admin Login credentials.</p>
+                <p class="text-xs text-gray-500 mt-1">Configure Returning Officer signature blocks, Admin Login credentials, and system data backups.</p>
+            </div>
+
+            <!-- Backup & Data Portability Section -->
+            <div class="space-y-4 pt-4 border-t">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-800">Backup & Data Portability</h3>
+                <p class="text-xs text-gray-500">Export your current database into a backup file, or restore it on another laptop via GitHub / flash drive.</p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="exportSystemData()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-blue-700 transition">📥 Export Data Backup</button>
+                    <label class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-emerald-700 transition cursor-pointer">
+                        📤 Import Data Backup
+                        <input type="file" accept=".json" onchange="importSystemData(event)" class="hidden">
+                    </label>
+                </div>
             </div>
 
             <!-- Admin Credentials Setup -->
@@ -492,7 +505,13 @@
     <script>
         let voters = JSON.parse(localStorage.getItem('election_voters')) || [];
         let faculty = JSON.parse(localStorage.getItem('election_faculty')) || [];
-        let posts = JSON.parse(localStorage.getItem('election_posts')) || [];
+        let posts = JSON.parse(localStorage.getItem('election_posts')) || [
+            { name: "Chairperson", category: "General Post" },
+            { name: "Vice Chairperson", category: "General Post" },
+            { name: "General Secretary", category: "General Post" },
+            { name: "University Union Councillor (UUC)", category: "General Post" },
+            { name: "Magazine Editor", category: "General Post" }
+        ];
         let nominations = JSON.parse(localStorage.getItem('election_nominations')) || [];
         let booths = JSON.parse(localStorage.getItem('election_booths')) || [];
         let ballotDefinitions = JSON.parse(localStorage.getItem('election_ballot_definitions')) || [];
@@ -500,7 +519,7 @@
         let ballotCounts = JSON.parse(localStorage.getItem('election_ballot_counts')) || {};
         let tossResults = JSON.parse(localStorage.getItem('election_toss_results')) || {};
         let finalizedPosts = JSON.parse(localStorage.getItem('election_finalized_posts')) || {};
-        let roSettings = JSON.parse(localStorage.getItem('election_ro_settings')) || { name: '', designation: '' };
+        let roSettings = JSON.parse(localStorage.getItem('election_ro_settings')) || { name: 'Nishad Kuzhingal Chakkalaparambil', designation: 'Returning Officer' };
         let aros = JSON.parse(localStorage.getItem('election_aros')) || [];
         let adminAuth = JSON.parse(localStorage.getItem('election_admin_auth')) || { user: 'admin', pass: 'admin123' };
         
@@ -530,6 +549,64 @@
             // Default load Home Tab
             switchTab('dashboard');
         };
+
+        // --- BACKUP & PORTABILITY FUNCTIONS ---
+        function exportSystemData() {
+            const backupData = {
+                voters: JSON.parse(localStorage.getItem('election_voters')) || [],
+                faculty: JSON.parse(localStorage.getItem('election_faculty')) || [],
+                posts: JSON.parse(localStorage.getItem('election_posts')) || [],
+                nominations: JSON.parse(localStorage.getItem('election_nominations')) || [],
+                booths: JSON.parse(localStorage.getItem('election_booths')) || [],
+                ballotDefinitions: JSON.parse(localStorage.getItem('election_ballot_definitions')) || [],
+                ballotAllocations: JSON.parse(localStorage.getItem('election_ballot_allocations')) || [],
+                ballotCounts: JSON.parse(localStorage.getItem('election_ballot_counts')) || {},
+                tossResults: JSON.parse(localStorage.getItem('election_toss_results')) || {},
+                finalizedPosts: JSON.parse(localStorage.getItem('election_finalized_posts')) || {},
+                roSettings: JSON.parse(localStorage.getItem('election_ro_settings')) || {},
+                aros: JSON.parse(localStorage.getItem('election_aros')) || [],
+                adminAuth: JSON.parse(localStorage.getItem('election_admin_auth')) || {}
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "election_system_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importSystemData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(imported.voters) localStorage.setItem('election_voters', JSON.stringify(imported.voters));
+                    if(imported.faculty) localStorage.setItem('election_faculty', JSON.stringify(imported.faculty));
+                    if(imported.posts) localStorage.setItem('election_posts', JSON.stringify(imported.posts));
+                    if(imported.nominations) localStorage.setItem('election_nominations', JSON.stringify(imported.nominations));
+                    if(imported.booths) localStorage.setItem('election_booths', JSON.stringify(imported.booths));
+                    if(imported.ballotDefinitions) localStorage.setItem('election_ballot_definitions', JSON.stringify(imported.ballotDefinitions));
+                    if(imported.ballotAllocations) localStorage.setItem('election_ballot_allocations', JSON.stringify(imported.ballotAllocations));
+                    if(imported.ballotCounts) localStorage.setItem('election_ballot_counts', JSON.stringify(imported.ballotCounts));
+                    if(imported.tossResults) localStorage.setItem('election_toss_results', JSON.stringify(imported.tossResults));
+                    if(imported.finalizedPosts) localStorage.setItem('election_finalized_posts', JSON.stringify(imported.finalizedPosts));
+                    if(imported.roSettings) localStorage.setItem('election_ro_settings', JSON.stringify(imported.roSettings));
+                    if(imported.aros) localStorage.setItem('election_aros', JSON.stringify(imported.aros));
+                    if(imported.adminAuth) localStorage.setItem('election_admin_auth', JSON.stringify(imported.adminAuth));
+                    
+                    alert('System data imported successfully! The page will now reload.');
+                    location.reload();
+                } catch(err) {
+                    alert('Invalid backup file format.');
+                }
+            };
+            reader.readAsText(file);
+        }
 
         function switchTab(tab) {
             ['dashboard', 'voters', 'faculty', 'nominations', 'booths', 'ballots', 'counting', 'settings'].forEach(t => {
@@ -575,7 +652,6 @@
                 document.getElementById('adminLoginModal').classList.add('hidden');
                 document.getElementById('authStatusIndicator').innerText = "Admin Session Active 🔓";
                 document.getElementById('authStatusIndicator').className = "text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200";
-                // Reveal the Reset Data button for authenticated admin
                 document.getElementById('resetDataBtn').classList.remove('hidden');
                 document.getElementById('loginUsername').value = '';
                 document.getElementById('loginPassword').value = '';
@@ -594,7 +670,6 @@
             isAdminLoggedIn = false;
             document.getElementById('authStatusIndicator').innerText = "Viewer Mode (Home Only)";
             document.getElementById('authStatusIndicator').className = "text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 border";
-            // Hide the Reset Data button when locked
             document.getElementById('resetDataBtn').classList.add('hidden');
             switchTab('dashboard');
             alert('Admin session locked successfully.');
@@ -652,7 +727,6 @@
             container.innerHTML = html;
         }
 
-        // Shared Signature Block Generator for All Relevant Documents (RO + All AROs) with Auto-Wrap Styling
         function generateOfficialSignaturesHTML() {
             let html = `
                 <div class="mt-8 pt-4 border-t-2 border-gray-400 grid grid-cols-2 sm:grid-cols-3 gap-6 text-xs" style="break-inside: avoid;">
@@ -675,7 +749,6 @@
             return html;
         }
 
-        // Statement of Ballot Papers Signatures Block (Presiding Officer + Polling Officer ONLY)
         function generateStatementSignaturesHTML(boothNameStr) {
             let html = `
                 <div class="mt-8 pt-4 border-t-2 border-gray-400 space-y-4 text-xs" style="break-inside: avoid;">
@@ -1297,7 +1370,7 @@
             container.innerHTML = '';
         }
 
-        // --- NEW PRINT: BOOTH-WISE POST-WISE COUNTING STATEMENT (Continuous Flow, Compact Spacing) ---
+        // --- BOOTH-WISE POST-WISE COUNTING STATEMENT ---
         function printBoothWiseCountingStatement() {
             if (posts.length === 0 || booths.length === 0) {
                 return alert('Please create posts, nominations, and booths first.');
@@ -1479,7 +1552,7 @@
 
         // --- CUMULATIVE COLLEGE-WIDE VOTE CALCULATOR HELPER ---
         function getCumulativePostResults(postName) {
-            let votesMap = {}; // candName -> totalVotes
+            let votesMap = {};
             ballotDefinitions.forEach(bDef => {
                 if (bDef.posts.includes(postName)) {
                     booths.forEach((b, bIdx) => {
@@ -1890,7 +1963,6 @@
                 }
             }
 
-            // --- CUMULATIVE COLLEGE-WIDE LEADER & MAJORITY CALCULATION ---
             const cumulativeMap = getCumulativePostResults(postName);
             let cumScores = [];
             for (let cName in cumulativeMap) {
@@ -1910,7 +1982,6 @@
                 }
             }
 
-            // Badge & Tie-Breaker Update
             const badgeContainer = document.getElementById(`result-badge-container-${postName}`);
             if(badgeContainer) {
                 let maxScore = -1;
@@ -1949,14 +2020,14 @@
                     }
                 } else if (winnerName) {
                     let statusText = isPostFinalized ? `🏆 Won: ${winnerName} (${maxScore} votes)` : `🏆 Booth Leader: ${winnerName} (${maxScore} votes)`;
-                    badgeContainer.innerHTML = `<span class="px-3 py-1 ${badgeColor} font-bold text-xs rounded-full shadow-sm">${statusText}</span>`;
+                    badgeContainer.innerHTML = `<span class="px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full shadow-sm">${statusText}</span>`;
                 } else {
                     badgeContainer.innerHTML = `<span class="text-xs text-gray-400 italic">No votes recorded yet.</span>`;
                 }
             }
         }
 
-        // --- PRINT: 1. OFFICIAL LIST OF ELECTED CANDIDATES (Compact & Single-Page Fit) ---
+        // --- PRINT: OFFICIAL LIST OF ELECTED CANDIDATES ---
         function printElectedCandidatesList() {
             if (ballotDefinitions.length === 0 || nominations.length === 0) {
                 return alert('No ballot definitions or nominations recorded yet.');
@@ -2006,7 +2077,6 @@
             let sl = 1;
             posts.forEach(p => {
                 const postName = p.name;
-                const isPostFinalized = finalizedPosts[postName] || false;
                 const votesMap = postResults[postName] || {};
                 const postNoms = nominations.filter(n => n.postName === postName);
 
@@ -2066,7 +2136,6 @@
             container.innerHTML = '';
         }
 
-        // --- OTHER PRINT TEMPLATES (With RO + ARO Signatures & Cleaned Appointments) ---
         function printOfficerAppointment(boothIdx, officerIdx) {
             const b = booths[boothIdx];
             const o = b.officers[officerIdx];
@@ -2181,7 +2250,6 @@
             container.innerHTML = '';
         }
 
-        // --- 3. COMPLETE LIST OF CANDIDATES (Auto-Adjusting Table) ---
         function printCompleteCandidateList() {
             if(nominations.length === 0) { return alert('No nominations recorded yet.'); }
             const postsMap = {};
